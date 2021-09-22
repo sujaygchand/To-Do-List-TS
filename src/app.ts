@@ -2,6 +2,9 @@ class TaskInput{
     templateElement : HTMLTemplateElement;
     hostElement : HTMLDivElement;
     formElement : HTMLFontElement;
+    titleInputElement : HTMLInputElement;
+    descriptionInputElement : HTMLInputElement;
+    effortInputElement : HTMLInputElement;
 
     constructor() {
        this.templateElement = document.getElementById('task-input') as HTMLTemplateElement;
@@ -17,10 +20,31 @@ class TaskInput{
         const importedNode = document.importNode(this.templateElement.content, true);
 
         this.formElement = importedNode.firstElementChild as HTMLFontElement;
+        this.formElement.id = "user-input";
+        this.titleInputElement = this.formElement.querySelector("#title") as HTMLInputElement;
+        this.descriptionInputElement = this.formElement.querySelector("#description") as HTMLInputElement;
+        this.effortInputElement = this.formElement.querySelector("#effort") as HTMLInputElement;
+        
+
+        if(!this.titleInputElement || !this.descriptionInputElement || !this.effortInputElement)
+            throw new Error("Input element does not have correct id assigned");
+
+
+        this.configure();
         this.attach();
     }
 
-    private attach(){
+    private submitHandler(event : Event) {
+        event.preventDefault();
+        console.log(this.titleInputElement.value);
+        
+    }
+
+    private configure() {
+        this.formElement.addEventListener("submit", this.submitHandler.bind(this));
+    }
+
+    private attach() {
         this.hostElement.insertAdjacentElement("afterbegin", this.formElement);
     }
 }
