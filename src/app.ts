@@ -43,6 +43,15 @@ function validate(validatebleInput: Validatable): boolean {
   return true;
 }
 
+function checkHTMLElementIsValid(
+    elements: HTMLElement[],
+    errorMessage: string
+  ) {
+    for (const element in elements) {
+      if (element === null) throw new Error(errorMessage);
+    }
+  }
+
 /** Decorators */
 function Autobind(
   target: any,
@@ -62,10 +71,17 @@ function Autobind(
   return adjDescriptor;
 }
 
+enum TaskStatus{
+    toDo = "To Do",
+    doing = "Doing",
+    done = "Done"
+}
+
+// TaskInput
 class TaskInput {
   templateElement: HTMLTemplateElement;
   hostElement: HTMLDivElement;
-  formElement: HTMLFontElement;
+  formElement: HTMLFormElement;
   titleInputElement: HTMLInputElement;
   descriptionInputElement: HTMLInputElement;
   effortInputElement: HTMLInputElement;
@@ -74,13 +90,13 @@ class TaskInput {
     this.templateElement = document.getElementById(
       "task-input"
     ) as HTMLTemplateElement;
-    this.checkHTMLElementIsValid(
+    checkHTMLElementIsValid(
       [this.templateElement],
       "task-input does not exist in index as HTMLTemplateElement"
     );
 
     this.hostElement = document.getElementById("app") as HTMLDivElement;
-    this.checkHTMLElementIsValid(
+    checkHTMLElementIsValid(
       [this.hostElement],
       "app does not exist in index as HTMLDivElement"
     );
@@ -90,7 +106,7 @@ class TaskInput {
       true
     );
 
-    this.formElement = importedNode.firstElementChild as HTMLFontElement;
+    this.formElement = importedNode.firstElementChild as HTMLFormElement;
     this.formElement.id = "user-input";
     this.titleInputElement = this.formElement.querySelector(
       "#title"
@@ -101,7 +117,7 @@ class TaskInput {
     this.effortInputElement = this.formElement.querySelector(
       "#effort"
     ) as HTMLInputElement;
-    this.checkHTMLElementIsValid(
+    checkHTMLElementIsValid(
       [
         this.titleInputElement,
         this.descriptionInputElement,
@@ -156,15 +172,54 @@ class TaskInput {
   private attach() {
     this.hostElement.insertAdjacentElement("afterbegin", this.formElement);
   }
+}
 
-  private checkHTMLElementIsValid(
-    elements: HTMLElement[],
-    errorMessage: string
-  ) {
-    for (const element in elements) {
-      if (element === null) throw new Error(errorMessage);
+// Task List
+class TaskList{
+    templateElement: HTMLTemplateElement;
+    hostElement: HTMLDivElement;
+    sectionElement: HTMLElement;
+
+    constructor(private type : TaskStatus) {
+        this.templateElement = document.getElementById(
+            "task-list"
+          ) as HTMLTemplateElement;
+
+          checkHTMLElementIsValid(
+            [this.templateElement],
+            "task-input does not exist in index as HTMLTemplateElement"
+          );
+      
+          this.hostElement = document.getElementById("app") as HTMLDivElement;
+
+          checkHTMLElementIsValid(
+            [this.hostElement],
+            "app does not exist in index as HTMLDivElement"
+          );
+      
+          const importedNode = document.importNode(
+            this.templateElement.content,
+            true
+          );
+      
+          this.sectionElement = importedNode.firstElementChild as HTMLElement;
+          this.sectionElement.id = `${this.type.toLowerCase()}-tasks`;
+          this.attach();
+          this.renderContent();
     }
-  }
+
+    private attach() {
+        this.hostElement.insertAdjacentElement("beforeend", this.sectionElement);
+    }
+
+    private renderContent() {
+        const listId = `${this.type}-tasks-list`;
+        this.sectionElement.querySelector("ul")!.id = listId;
+        this.sectionElement.querySelector("h2")!.textContent = this.type.toString().toUpperCase() + " TASKS";
+    }
 }
 
 const taskInput = new TaskInput();
+const toDoList = new TaskList(TaskStatus.toDo);
+const doingList = new TaskList(TaskStatus.doing);
+const doneList = new TaskList(TaskStatus.done);
