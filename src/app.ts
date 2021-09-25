@@ -44,13 +44,13 @@ function validate(validatebleInput: Validatable): boolean {
 }
 
 function checkHTMLElementIsValid(
-    elements: HTMLElement[],
-    errorMessage: string
-  ) {
-    for (const element in elements) {
-      if (element === null) throw new Error(errorMessage);
-    }
+  elements: HTMLElement[],
+  errorMessage: string
+) {
+  for (const element in elements) {
+    if (element === null) throw new Error(errorMessage);
   }
+}
 
 /** Decorators */
 function Autobind(
@@ -71,42 +71,48 @@ function Autobind(
   return adjDescriptor;
 }
 
-enum TaskStatus{
-    toDo = "To Do",
-    doing = "Doing",
-    done = "Done"
+enum TaskStatus {
+  toDo = "To Do",
+  doing = "Doing",
+  done = "Done",
 }
 
+class Task {
+  constructor(
+    public id: string,
+    public title: string,
+    public description: string,
+    public effort: number,
+    public status: TaskStatus
+  ) {}
+}
+
+type Listener = (items: Task[]) => void;
+
 class TaskManager {
-    private listeners: any[] = [];
-    private tasks: any[] = [];
-    private static instance: TaskManager;
+  private listeners: Listener[] = [];
+  private tasks: Task[] = [];
+  private static instance: TaskManager;
 
-    private constructor() {}
+  private constructor() {}
 
-    static getInstance(){
+  static getInstance() {
+    this.instance ??= new TaskManager();
+    return this.instance;
+  }
 
-        this.instance ??= new TaskManager();
-        return this.instance;
+  addListener(listener: Listener) {
+    this.listeners.push(listener);
+  }
+
+  addProject(title: string, description: string, effort: number) {
+    const newTask =  new Task(Math.random().toString(), title, description, effort, TaskStatus.toDo);
+    this.tasks.push(newTask);
+
+    for (const listener of this.listeners) {
+      listener(this.tasks.slice());
     }
-
-    addListener(listener : Function) {
-        this.listeners.push(listener);
-    }
-
-    addProject(title: string, description: string, effort: number) {
-        const newTask = {
-            id: Math.random().toString(),
-            title : title,
-            description: description,
-            effort: effort
-        };
-        this.tasks.push(newTask);
-
-        for(const listener of this.listeners){
-            listener(this.tasks.slice());
-        }
-    }
+  }
 }
 
 // TaskInput
@@ -168,12 +174,21 @@ class TaskInput {
     const inputEffort = this.effortInputElement.value;
 
     const titleValidate: Validatable = { value: inputTitle, required: true };
-    const descriptionValidate: Validatable = { value: inputDescription};
-    const effortValidate: Validatable = { value: +inputEffort, required: true, min: 1, max: 10 };
+    const descriptionValidate: Validatable = { value: inputDescription };
+    const effortValidate: Validatable = {
+      value: +inputEffort,
+      required: true,
+      min: 1,
+      max: 10,
+    };
 
-    if(!validate(titleValidate) || !validate(descriptionValidate) || !validate(effortValidate)) {
-        alert("Invalid input, please try again!");
-        return;
+    if (
+      !validate(titleValidate) ||
+      !validate(descriptionValidate) ||
+      !validate(effortValidate)
+    ) {
+      alert("Invalid input, please try again!");
+      return;
     }
 
     this.clearInput();
@@ -208,70 +223,75 @@ class TaskInput {
 }
 
 // Task List
-class TaskList{
-    templateElement: HTMLTemplateElement;
-    hostElement: HTMLDivElement;
-    sectionElement: HTMLElement;
-    assignedTasks: any[];
+class TaskList {
+  templateElement: HTMLTemplateElement;
+  hostElement: HTMLDivElement;
+  sectionElement: HTMLElement;
+  assignedTasks: Task[];
 
-    constructor(private type : TaskStatus) {
-        this.templateElement = document.getElementById(
-            "task-list"
-          ) as HTMLTemplateElement;
+  constructor(private type: TaskStatus) {
+    this.templateElement = document.getElementById(
+      "task-list"
+    ) as HTMLTemplateElement;
 
-          checkHTMLElementIsValid(
-            [this.templateElement],
-            "task-input does not exist in index as HTMLTemplateElement"
-          );
-      
-          this.hostElement = document.getElementById("app") as HTMLDivElement;
+    checkHTMLElementIsValid(
+      [this.templateElement],
+      "task-input does not exist in index as HTMLTemplateElement"
+    );
 
-          checkHTMLElementIsValid(
-            [this.hostElement],
-            "app does not exist in index as HTMLDivElement"
-          );
-      
-          const importedNode = document.importNode(
-            this.templateElement.content,
-            true
-          );
-      
-          this.sectionElement = importedNode.firstElementChild as HTMLElement;
-          this.sectionElement.id = `${this.type.toLowerCase()}-tasks`;
-        
-          this.assignedTasks = [];
+    this.hostElement = document.getElementById("app") as HTMLDivElement;
 
-          taskManager.addListener((tasks : any) => {
-              this.assignedTasks = tasks;
-              this.renderTasks();
-          });
+    checkHTMLElementIsValid(
+      [this.hostElement],
+      "app does not exist in index as HTMLDivElement"
+    );
 
-          this.attach();
-          this.renderContent();
+    const importedNode = document.importNode(
+      this.templateElement.content,
+      true
+    );
+
+    this.sectionElement = importedNode.firstElementChild as HTMLElement;
+    this.sectionElement.id = `${this.type.toLowerCase()}-tasks`;
+
+    this.assignedTasks = [];
+
+    taskManager.addListener((tasks: Task[]) => {
+      this.assignedTasks = tasks;
+      this.renderTasks();
+    });
+
+    this.attach();
+    this.renderContent();
+  }
+
+  private renderTasks() {
+    const listEl = document.getElementById(
+      `${this.type}-tasks-list`
+    ) as HTMLUListElement;
+    checkHTMLElementIsValid(
+      [listEl],
+      `${this.type}-tasks-list does not exist in index as HTMLUListElement`
+    );
+
+    for (const taskItem of this.assignedTasks) {
+      const listItem = document.createElement("li");
+      listItem.textContent = taskItem.title;
+      listEl.appendChild(listItem);
     }
+  }
 
-    private renderTasks() {
-        const listEl = document.getElementById(`${this.type}-tasks-list`) as HTMLUListElement;
-        checkHTMLElementIsValid([listEl], `${this.type}-tasks-list does not exist in index as HTMLUListElement`);
+  private attach() {
+    this.hostElement.insertAdjacentElement("beforeend", this.sectionElement);
+  }
 
-        for(const taskItem of this.assignedTasks) {
-            const listItem = document.createElement("li");
-            listItem.textContent = taskItem.title;
-            listEl.appendChild(listItem);
-        }
-    }
-
-    private attach() {
-        this.hostElement.insertAdjacentElement("beforeend", this.sectionElement);
-    }
-
-    private renderContent() {
-        const listId = `${this.type}-tasks-list`;
-        this.sectionElement.querySelector("ul")!.id = listId;
-        this.sectionElement.querySelector("h2")!.textContent = this.type.toString().toUpperCase() + " TASKS";
-    }
+  private renderContent() {
+    const listId = `${this.type}-tasks-list`;
+    this.sectionElement.querySelector("ul")!.id = listId;
+    this.sectionElement.querySelector("h2")!.textContent =
+      this.type.toString().toUpperCase() + " TASKS";
+  }
 }
-
 
 const taskManager = TaskManager.getInstance();
 
