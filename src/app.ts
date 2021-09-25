@@ -77,6 +77,38 @@ enum TaskStatus{
     done = "Done"
 }
 
+class TaskManager {
+    private listeners: any[] = [];
+    private tasks: any[] = [];
+    private static instance: TaskManager;
+
+    private constructor() {}
+
+    static getInstance(){
+
+        this.instance ??= new TaskManager();
+        return this.instance;
+    }
+
+    addListener(listener : Function) {
+        this.listeners.push(listener);
+    }
+
+    addProject(title: string, description: string, effort: number) {
+        const newTask = {
+            id: Math.random().toString(),
+            title : title,
+            description: description,
+            effort: effort
+        };
+        this.tasks.push(newTask);
+
+        for(const listener of this.listeners){
+            listener(this.tasks.slice());
+        }
+    }
+}
+
 // TaskInput
 class TaskInput {
   templateElement: HTMLTemplateElement;
@@ -161,6 +193,7 @@ class TaskInput {
 
     if (Array.isArray(userInput)) {
       const [title, desc, effort] = userInput;
+      taskManager.addProject(title, desc, effort);
       console.log(title, desc, effort);
     }
   }
@@ -179,6 +212,7 @@ class TaskList{
     templateElement: HTMLTemplateElement;
     hostElement: HTMLDivElement;
     sectionElement: HTMLElement;
+    assignedTasks: any[];
 
     constructor(private type : TaskStatus) {
         this.templateElement = document.getElementById(
@@ -204,8 +238,27 @@ class TaskList{
       
           this.sectionElement = importedNode.firstElementChild as HTMLElement;
           this.sectionElement.id = `${this.type.toLowerCase()}-tasks`;
+        
+          this.assignedTasks = [];
+
+          taskManager.addListener((tasks : any) => {
+              this.assignedTasks = tasks;
+              this.renderTasks();
+          });
+
           this.attach();
           this.renderContent();
+    }
+
+    private renderTasks() {
+        const listEl = document.getElementById(`${this.type}-tasks-list`) as HTMLUListElement;
+        checkHTMLElementIsValid([listEl], `${this.type}-tasks-list does not exist in index as HTMLUListElement`);
+
+        for(const taskItem of this.assignedTasks) {
+            const listItem = document.createElement("li");
+            listItem.textContent = taskItem.title;
+            listEl.appendChild(listItem);
+        }
     }
 
     private attach() {
@@ -218,6 +271,9 @@ class TaskList{
         this.sectionElement.querySelector("h2")!.textContent = this.type.toString().toUpperCase() + " TASKS";
     }
 }
+
+
+const taskManager = TaskManager.getInstance();
 
 const taskInput = new TaskInput();
 const toDoList = new TaskList(TaskStatus.toDo);
