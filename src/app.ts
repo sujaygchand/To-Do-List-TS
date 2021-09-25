@@ -77,6 +77,53 @@ enum TaskStatus {
   done = "Done",
 }
 
+abstract class Component<T extends HTMLElement, U extends HTMLElement> {
+    templateElement: HTMLTemplateElement;
+    hostElement: T;
+    element: U;
+  
+    constructor(
+      templateId: string,
+      hostElementId: string,
+      insertElementLocation: InsertPosition,
+      newElementId?: string
+    ) {
+      this.templateElement = document.getElementById(
+        templateId
+      ) as HTMLTemplateElement;
+  
+      checkHTMLElementIsValid(
+        [this.templateElement],
+        "task-input does not exist in index as HTMLTemplateElement"
+      );
+  
+      this.hostElement = document.getElementById(hostElementId) as T;
+      checkHTMLElementIsValid(
+        [this.hostElement],
+        `${hostElementId} does not exist in index`
+      );
+  
+      const importedNode = document.importNode(
+          this.templateElement.content,
+          true
+        );
+    
+      this.element = importedNode.firstElementChild as U;
+        
+        if(newElementId)
+          this.element.id = newElementId;
+  
+      this.attach(insertElementLocation);
+    }
+  
+    private attach(position: InsertPosition) {
+      this.hostElement.insertAdjacentElement(position , this.element);
+    }
+  
+    abstract configure() : void;
+    abstract renderContent() : void;
+  }
+
 class Task {
   constructor(
     public id: string,
@@ -87,26 +134,37 @@ class Task {
   ) {}
 }
 
-type Listener = (items: Task[]) => void;
+type Listener<T> = (items: T[]) => void;
 
-class TaskManager {
-  private listeners: Listener[] = [];
+class Manager<T> {
+    protected listeners: Listener<T>[] = [];
+
+    addListener(listener: Listener<T>) {
+        this.listeners.push(listener);
+      }
+}
+
+class TaskManager extends Manager<Task> {
   private tasks: Task[] = [];
   private static instance: TaskManager;
 
-  private constructor() {}
+  private constructor( ) {
+    super();
+  }
 
   static getInstance() {
     this.instance ??= new TaskManager();
     return this.instance;
   }
 
-  addListener(listener: Listener) {
-    this.listeners.push(listener);
-  }
-
   addProject(title: string, description: string, effort: number) {
-    const newTask =  new Task(Math.random().toString(), title, description, effort, TaskStatus.toDo);
+    const newTask = new Task(
+      Math.random().toString(),
+      title,
+      description,
+      effort,
+      TaskStatus.toDo
+    );
     this.tasks.push(newTask);
 
     for (const listener of this.listeners) {
@@ -116,57 +174,41 @@ class TaskManager {
 }
 
 // TaskInput
-class TaskInput {
-  templateElement: HTMLTemplateElement;
-  hostElement: HTMLDivElement;
-  formElement: HTMLFormElement;
+class TaskInput extends Component<HTMLDivElement, HTMLFormElement> {
   titleInputElement: HTMLInputElement;
   descriptionInputElement: HTMLInputElement;
   effortInputElement: HTMLInputElement;
 
   constructor() {
-    this.templateElement = document.getElementById(
-      "task-input"
-    ) as HTMLTemplateElement;
-    checkHTMLElementIsValid(
-      [this.templateElement],
-      "task-input does not exist in index as HTMLTemplateElement"
-    );
 
-    this.hostElement = document.getElementById("app") as HTMLDivElement;
-    checkHTMLElementIsValid(
-      [this.hostElement],
-      "app does not exist in index as HTMLDivElement"
-    );
+    super("task-input", "app", "afterbegin", "user-input");
 
-    const importedNode = document.importNode(
-      this.templateElement.content,
-      true
-    );
-
-    this.formElement = importedNode.firstElementChild as HTMLFormElement;
-    this.formElement.id = "user-input";
-    this.titleInputElement = this.formElement.querySelector(
-      "#title"
-    ) as HTMLInputElement;
-    this.descriptionInputElement = this.formElement.querySelector(
-      "#description"
-    ) as HTMLInputElement;
-    this.effortInputElement = this.formElement.querySelector(
-      "#effort"
-    ) as HTMLInputElement;
-    checkHTMLElementIsValid(
-      [
-        this.titleInputElement,
-        this.descriptionInputElement,
-        this.effortInputElement,
-      ],
-      "An input element does not have correct id assigned"
-    );
+    this.titleInputElement = this.element.querySelector(
+        "#title"
+      ) as HTMLInputElement;
+      this.descriptionInputElement = this.element.querySelector(
+        "#description"
+      ) as HTMLInputElement;
+      this.effortInputElement = this.element.querySelector(
+        "#effort"
+      ) as HTMLInputElement;
+      checkHTMLElementIsValid(
+        [
+          this.titleInputElement,
+          this.descriptionInputElement,
+          this.effortInputElement,
+        ],
+        "An input element does not have correct id assigned"
+      );
 
     this.configure();
-    this.attach();
   }
+  
+  configure() {
+    this.element.addEventListener("submit", this.submitHandler);
+  }
+
+  renderContent(){}
 
   private gatherUserInput(): [string, string, number] | void {
     const inputTitle = this.titleInputElement.value;
@@ -212,58 +254,30 @@ class TaskInput {
       console.log(title, desc, effort);
     }
   }
-
-  private configure() {
-    this.formElement.addEventListener("submit", this.submitHandler);
-  }
-
-  private attach() {
-    this.hostElement.insertAdjacentElement("afterbegin", this.formElement);
-  }
 }
 
 // Task List
-class TaskList {
-  templateElement: HTMLTemplateElement;
-  hostElement: HTMLDivElement;
-  sectionElement: HTMLElement;
+class TaskList  extends Component<HTMLDivElement, HTMLElement>{
   assignedTasks: Task[];
 
   constructor(private type: TaskStatus) {
-    this.templateElement = document.getElementById(
-      "task-list"
-    ) as HTMLTemplateElement;
-
-    checkHTMLElementIsValid(
-      [this.templateElement],
-      "task-input does not exist in index as HTMLTemplateElement"
-    );
-
-    this.hostElement = document.getElementById("app") as HTMLDivElement;
-
-    checkHTMLElementIsValid(
-      [this.hostElement],
-      "app does not exist in index as HTMLDivElement"
-    );
-
-    const importedNode = document.importNode(
-      this.templateElement.content,
-      true
-    );
-
-    this.sectionElement = importedNode.firstElementChild as HTMLElement;
-    this.sectionElement.id = `${this.type.toLowerCase()}-tasks`;
+      super("task-list", "app", "beforeend", `${type.toLowerCase()}-tasks`);
 
     this.assignedTasks = [];
-
-    taskManager.addListener((tasks: Task[]) => {
-      this.assignedTasks = tasks;
-      this.renderTasks();
-    });
-
-    this.attach();
+    this.configure();    
     this.renderContent();
   }
+
+  configure() {
+    taskManager.addListener((tasks: Task[]) => {
+        const relevantTasks = tasks.filter((task) => {
+          return task.status === this.type;
+        });
+  
+        this.assignedTasks = relevantTasks;
+        this.renderTasks();
+      });
+}
 
   private renderTasks() {
     const listEl = document.getElementById(
@@ -274,6 +288,8 @@ class TaskList {
       `${this.type}-tasks-list does not exist in index as HTMLUListElement`
     );
 
+    listEl.innerHTML = "";
+
     for (const taskItem of this.assignedTasks) {
       const listItem = document.createElement("li");
       listItem.textContent = taskItem.title;
@@ -281,14 +297,10 @@ class TaskList {
     }
   }
 
-  private attach() {
-    this.hostElement.insertAdjacentElement("beforeend", this.sectionElement);
-  }
-
-  private renderContent() {
+  renderContent() {
     const listId = `${this.type}-tasks-list`;
-    this.sectionElement.querySelector("ul")!.id = listId;
-    this.sectionElement.querySelector("h2")!.textContent =
+    this.element.querySelector("ul")!.id = listId;
+    this.element.querySelector("h2")!.textContent =
       this.type.toString().toUpperCase() + " TASKS";
   }
 }
