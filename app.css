@@ -129,9 +129,13 @@ button:active {
   background: #ffe3ee;
 }
 
-#done-tasks .droppable {
+#doing-tasks .droppable {
   background: #d6e1ff;
 }
+
+#done-tasks .droppable {
+    background: #d6ffe0;
+  }
 
 #user-input {
   margin: 1rem;

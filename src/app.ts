@@ -305,7 +305,7 @@ class TaskInput extends Component<HTMLDivElement, HTMLFormElement> {
 }
 
 // Task List
-class TaskList extends Component<HTMLDivElement, HTMLElement> {
+class TaskList extends Component<HTMLDivElement, HTMLElement> implements DragTarget {
   assignedTasks: TaskData[];
 
   constructor(private type: TaskStatus) {
@@ -316,7 +316,27 @@ class TaskList extends Component<HTMLDivElement, HTMLElement> {
     this.renderContent();
   }
 
+  @Autobind
+    dragOverHandler(event: DragEvent): void {
+        const listEl = this.element.querySelector('ul')!;
+        listEl.classList.add("droppable");
+    }
+
+    @Autobind
+    dragLeaveHandler(event: DragEvent): void {
+        const listEl = this.element.querySelector('ul')!;
+        listEl.classList.remove("droppable");
+    }
+
+    dropHandler(event: DragEvent): void {
+        
+    }
+
   configure() {
+    this.element.addEventListener("dragover", this.dragOverHandler);
+    this.element.addEventListener("dragleave", this.dragLeaveHandler);
+    this.element.addEventListener("drop", this.dropHandler);
+
     taskManager.addListener((tasks: TaskData[]) => {
       const relevantTasks = tasks.filter((task) => {
         return task.status === this.type;
