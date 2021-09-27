@@ -185,7 +185,7 @@ class TaskManager extends Manager<TaskData> {
   }
 }
 
-class TaskItem extends Component<HTMLUListElement, HTMLLIElement> {
+class TaskItem extends Component<HTMLUListElement, HTMLLIElement> implements Draggable{
     private taskData : TaskData;
 
     get effort(){
@@ -200,7 +200,19 @@ class TaskItem extends Component<HTMLUListElement, HTMLLIElement> {
         this.renderContent();
     }
 
+    @Autobind
+    dragStartHandler(event: DragEvent): void {
+        console.log("Drag start: " + this.taskData.title);
+    }
+
+    @Autobind
+    dragEndHandler(event: DragEvent): void {
+        console.log("Drag end: " + this.taskData.title);
+    }
+
     configure(): void {
+        this.element.addEventListener("dragstart", this.dragStartHandler);
+        this.element.addEventListener("dragend", this.dragEndHandler);
     }
 
     renderContent(): void {
