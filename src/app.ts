@@ -19,6 +19,10 @@ interface DragTarget {
     dropHandler(event: DragEvent): void;
 }
 
+class Utilities{
+    static readonly TEXT_PLAIN = "text/plain"; 
+}
+
 function validate(validatebleInput: Validatable): boolean {
   // Empty input
   if (
@@ -169,7 +173,7 @@ class TaskManager extends Manager<TaskData> {
     return this.instance;
   }
 
-  addProject(title: string, description: string, effort: number) {
+  addTask(title: string, description: string, effort: number) {
     const newTask = new TaskData(
       Math.random().toString(),
       title,
@@ -178,10 +182,23 @@ class TaskManager extends Manager<TaskData> {
       TaskStatus.toDo
     );
     this.tasks.push(newTask);
+    this.updateListeners();
+  }
 
+  moveTask(taskId: string, newStatus: TaskStatus) {
+    const task = this.tasks.find(tempTask => tempTask.id == taskId);
+
+    if(task == null || task.status === newStatus)
+        return;
+
+    task.status = newStatus;
+    this.updateListeners();
+  }
+
+  private updateListeners(){
     for (const listener of this.listeners) {
-      listener(this.tasks.slice());
-    }
+        listener(this.tasks.slice());
+      }
   }
 }
 
@@ -202,7 +219,8 @@ class TaskItem extends Component<HTMLUListElement, HTMLLIElement> implements Dra
 
     @Autobind
     dragStartHandler(event: DragEvent): void {
-        console.log("Drag start: " + this.taskData.title);
+        event.dataTransfer?.setData(Utilities.TEXT_PLAIN, this.taskData.id);
+        event.dataTransfer!.effectAllowed = "move";
     }
 
     @Autobind
@@ -298,7 +316,7 @@ class TaskInput extends Component<HTMLDivElement, HTMLFormElement> {
 
     if (Array.isArray(userInput)) {
       const [title, desc, effort] = userInput;
-      taskManager.addProject(title, desc, effort);
+      taskManager.addTask(title, desc, effort);
       console.log(title, desc, effort);
     }
   }
@@ -306,7 +324,8 @@ class TaskInput extends Component<HTMLDivElement, HTMLFormElement> {
 
 // Task List
 class TaskList extends Component<HTMLDivElement, HTMLElement> implements DragTarget {
-  assignedTasks: TaskData[];
+    assignedTasks: TaskData[];
+    isFocused : boolean = false;
 
   constructor(private type: TaskStatus) {
     super("task-list", "app", "beforeend", `${type.toLowerCase()}-tasks`);
@@ -318,6 +337,11 @@ class TaskList extends Component<HTMLDivElement, HTMLElement> implements DragTar
 
   @Autobind
     dragOverHandler(event: DragEvent): void {
+        
+        if(event.dataTransfer === null || event.dataTransfer.types[0] != Utilities.TEXT_PLAIN)
+           return;
+        
+        event.preventDefault();
         const listEl = this.element.querySelector('ul')!;
         listEl.classList.add("droppable");
     }
@@ -328,8 +352,10 @@ class TaskList extends Component<HTMLDivElement, HTMLElement> implements DragTar
         listEl.classList.remove("droppable");
     }
 
+    @Autobind
     dropHandler(event: DragEvent): void {
-        
+        const taskId = event.dataTransfer!.getData(Utilities.TEXT_PLAIN);
+        taskManager.moveTask(taskId, this.type);
     }
 
   configure() {
