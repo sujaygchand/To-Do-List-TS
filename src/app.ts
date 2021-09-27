@@ -8,6 +8,17 @@ interface Validatable {
   max?: number;
 }
 
+interface Draggable {
+    dragStartHandler(event: DragEvent): void;
+    dragEndHandler(event: DragEvent): void;
+}
+
+interface DragTarget {
+    dragOverHandler(event: DragEvent): void;
+    dragLeaveHandler(event: DragEvent): void;
+    dropHandler(event: DragEvent): void;
+}
+
 function validate(validatebleInput: Validatable): boolean {
   // Empty input
   if (
@@ -78,53 +89,54 @@ enum TaskStatus {
 }
 
 abstract class Component<T extends HTMLElement, U extends HTMLElement> {
-    templateElement: HTMLTemplateElement;
-    hostElement: T;
-    element: U;
-  
-    constructor(
-      templateId: string,
-      hostElementId: string,
-      insertElementLocation: InsertPosition,
-      newElementId?: string
-    ) {
-      this.templateElement = document.getElementById(
-        templateId
-      ) as HTMLTemplateElement;
-  
-      checkHTMLElementIsValid(
-        [this.templateElement],
-        "task-input does not exist in index as HTMLTemplateElement"
-      );
-  
-      this.hostElement = document.getElementById(hostElementId) as T;
-      checkHTMLElementIsValid(
-        [this.hostElement],
-        `${hostElementId} does not exist in index`
-      );
-  
-      const importedNode = document.importNode(
-          this.templateElement.content,
-          true
-        );
-    
-      this.element = importedNode.firstElementChild as U;
-        
-        if(newElementId)
-          this.element.id = newElementId;
-  
-      this.attach(insertElementLocation);
-    }
-  
-    private attach(position: InsertPosition) {
-      this.hostElement.insertAdjacentElement(position , this.element);
-    }
-  
-    abstract configure() : void;
-    abstract renderContent() : void;
+  templateElement: HTMLTemplateElement;
+  // Where to put element
+  hostElement: T;
+  // Type of element
+  element: U;
+
+  constructor(
+    templateId: string,
+    hostElementId: string,
+    insertElementLocation: InsertPosition,
+    newElementId?: string
+  ) {
+    this.templateElement = document.getElementById(
+      templateId
+    ) as HTMLTemplateElement;
+
+    checkHTMLElementIsValid(
+      [this.templateElement],
+      "task-input does not exist in index as HTMLTemplateElement"
+    );
+
+    this.hostElement = document.getElementById(hostElementId) as T;
+    checkHTMLElementIsValid(
+      [this.hostElement],
+      `${hostElementId} does not exist in index`
+    );
+
+    const importedNode = document.importNode(
+      this.templateElement.content,
+      true
+    );
+
+    this.element = importedNode.firstElementChild as U;
+
+    if (newElementId) this.element.id = newElementId;
+
+    this.attach(insertElementLocation);
   }
 
-class Task {
+  private attach(position: InsertPosition) {
+    this.hostElement.insertAdjacentElement(position, this.element);
+  }
+
+  abstract configure(): void;
+  abstract renderContent(): void;
+}
+
+class TaskData {
   constructor(
     public id: string,
     public title: string,
@@ -137,18 +149,18 @@ class Task {
 type Listener<T> = (items: T[]) => void;
 
 class Manager<T> {
-    protected listeners: Listener<T>[] = [];
+  protected listeners: Listener<T>[] = [];
 
-    addListener(listener: Listener<T>) {
-        this.listeners.push(listener);
-      }
+  addListener(listener: Listener<T>) {
+    this.listeners.push(listener);
+  }
 }
 
-class TaskManager extends Manager<Task> {
-  private tasks: Task[] = [];
+class TaskManager extends Manager<TaskData> {
+  private tasks: TaskData[] = [];
   private static instance: TaskManager;
 
-  private constructor( ) {
+  private constructor() {
     super();
   }
 
@@ -158,7 +170,7 @@ class TaskManager extends Manager<Task> {
   }
 
   addProject(title: string, description: string, effort: number) {
-    const newTask = new Task(
+    const newTask = new TaskData(
       Math.random().toString(),
       title,
       description,
@@ -173,6 +185,31 @@ class TaskManager extends Manager<Task> {
   }
 }
 
+class TaskItem extends Component<HTMLUListElement, HTMLLIElement> {
+    private taskData : TaskData;
+
+    get effort(){
+        return this.taskData?.effort;
+    }
+
+    constructor(hostId: string, task: TaskData) {
+        super("single-task", hostId, "beforeend", task.id);
+        this.taskData = task;
+
+        this.configure();
+        this.renderContent();
+    }
+
+    configure(): void {
+    }
+
+    renderContent(): void {
+        this.element.querySelector("h2")!.textContent = this.taskData.title;
+        this.element.querySelector("h3")!.textContent = `Effort: ${this.effort}`;
+        this.element.querySelector("p")!.textContent = this.taskData.description;
+    }
+}
+
 // TaskInput
 class TaskInput extends Component<HTMLDivElement, HTMLFormElement> {
   titleInputElement: HTMLInputElement;
@@ -180,35 +217,34 @@ class TaskInput extends Component<HTMLDivElement, HTMLFormElement> {
   effortInputElement: HTMLInputElement;
 
   constructor() {
-
     super("task-input", "app", "afterbegin", "user-input");
 
     this.titleInputElement = this.element.querySelector(
-        "#title"
-      ) as HTMLInputElement;
-      this.descriptionInputElement = this.element.querySelector(
-        "#description"
-      ) as HTMLInputElement;
-      this.effortInputElement = this.element.querySelector(
-        "#effort"
-      ) as HTMLInputElement;
-      checkHTMLElementIsValid(
-        [
-          this.titleInputElement,
-          this.descriptionInputElement,
-          this.effortInputElement,
-        ],
-        "An input element does not have correct id assigned"
-      );
+      "#title"
+    ) as HTMLInputElement;
+    this.descriptionInputElement = this.element.querySelector(
+      "#description"
+    ) as HTMLInputElement;
+    this.effortInputElement = this.element.querySelector(
+      "#effort"
+    ) as HTMLInputElement;
+    checkHTMLElementIsValid(
+      [
+        this.titleInputElement,
+        this.descriptionInputElement,
+        this.effortInputElement,
+      ],
+      "An input element does not have correct id assigned"
+    );
 
     this.configure();
   }
-  
+
   configure() {
     this.element.addEventListener("submit", this.submitHandler);
   }
 
-  renderContent(){}
+  renderContent() {}
 
   private gatherUserInput(): [string, string, number] | void {
     const inputTitle = this.titleInputElement.value;
@@ -257,27 +293,27 @@ class TaskInput extends Component<HTMLDivElement, HTMLFormElement> {
 }
 
 // Task List
-class TaskList  extends Component<HTMLDivElement, HTMLElement>{
-  assignedTasks: Task[];
+class TaskList extends Component<HTMLDivElement, HTMLElement> {
+  assignedTasks: TaskData[];
 
   constructor(private type: TaskStatus) {
-      super("task-list", "app", "beforeend", `${type.toLowerCase()}-tasks`);
+    super("task-list", "app", "beforeend", `${type.toLowerCase()}-tasks`);
 
     this.assignedTasks = [];
-    this.configure();    
+    this.configure();
     this.renderContent();
   }
 
   configure() {
-    taskManager.addListener((tasks: Task[]) => {
-        const relevantTasks = tasks.filter((task) => {
-          return task.status === this.type;
-        });
-  
-        this.assignedTasks = relevantTasks;
-        this.renderTasks();
+    taskManager.addListener((tasks: TaskData[]) => {
+      const relevantTasks = tasks.filter((task) => {
+        return task.status === this.type;
       });
-}
+
+      this.assignedTasks = relevantTasks;
+      this.renderTasks();
+    });
+  }
 
   private renderTasks() {
     const listEl = document.getElementById(
@@ -291,9 +327,10 @@ class TaskList  extends Component<HTMLDivElement, HTMLElement>{
     listEl.innerHTML = "";
 
     for (const taskItem of this.assignedTasks) {
-      const listItem = document.createElement("li");
-      listItem.textContent = taskItem.title;
-      listEl.appendChild(listItem);
+    //   const listItem = document.createElement("li");
+    //   listItem.textContent = taskItem.title;
+    //   listEl.appendChild(listItem);
+        new TaskItem(this.element.querySelector("ul")!.id, taskItem);
     }
   }
 
