@@ -1,7 +1,7 @@
-import { TaskStatus } from "./models/taskData.js";
-import { TaskManager } from "./managers/taskManager.js";
-import { TaskInput } from "./components/taskInput.js";
-import { TaskList } from './components/taskList.js';
+import { TaskStatus } from "./models/taskData";
+import { TaskManager } from "./managers/taskManager";
+import { TaskInput } from "./components/taskInput";
+import { TaskList } from './components/taskList';
 
 TaskManager.getInstance();
 

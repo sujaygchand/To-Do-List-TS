@@ -1,8 +1,8 @@
-import Autobind from "../decorators/autobind.js";
-import { Draggable } from "../models/drag-drop-interfaces.js";
-import { TaskData } from "../models/taskData.js";
-import { StaticDetails } from "../utilities/staticDetails.js";
-import { Component } from "./component.js";
+import Autobind from "../decorators/autobind";
+import { Draggable } from "../models/drag-drop-interfaces";
+import { TaskData } from "../models/taskData";
+import { StaticDetails } from "../utilities/staticDetails";
+import { Component } from "./component";
 
 export class TaskItem extends Component<HTMLUListElement, HTMLLIElement> implements Draggable{
     private taskData : TaskData;

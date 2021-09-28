@@ -1,11 +1,11 @@
-import Autobind from "../decorators/autobind.js";
-import { DragTarget } from "../models/drag-drop-interfaces.js";
-import { TaskData, TaskStatus } from "../models/taskData.js";
-import { StaticDetails } from "../utilities/staticDetails.js";
-import { Component } from "./component.js";
-import { TaskManager } from "../managers/taskManager.js";
-import { Validation } from "../utilities/validation.js";
-import { TaskItem } from "./taskItem.js";
+import Autobind from "../decorators/autobind";
+import { DragTarget } from "../models/drag-drop-interfaces";
+import { TaskData, TaskStatus } from "../models/taskData";
+import { StaticDetails } from "../utilities/staticDetails";
+import { Component } from "./component";
+import { TaskManager } from "../managers/taskManager";
+import { Validation } from "../utilities/validation";
+import { TaskItem } from "./taskItem";
 
 export class TaskList extends Component<HTMLDivElement, HTMLElement> implements DragTarget {
     assignedTasks: TaskData[];

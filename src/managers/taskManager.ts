@@ -1,5 +1,5 @@
-import { Manager } from "./manager.js";
-import { TaskData, TaskStatus } from "../models/taskData.js";
+import { Manager } from "./manager";
+import { TaskData, TaskStatus } from "../models/taskData";
 
 export class TaskManager extends Manager<TaskData> {
     private tasks: TaskData[] = [];

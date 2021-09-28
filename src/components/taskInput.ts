@@ -1,7 +1,7 @@
-import Autobind from "../decorators/autobind.js";
-import { TaskManager } from "../managers/taskManager.js";
-import { Validatable, Validation } from "../utilities/validation.js";
-import { Component } from "./component.js";
+import Autobind from "../decorators/autobind";
+import { TaskManager } from "../managers/taskManager";
+import { Validatable, Validation } from "../utilities/validation";
+import { Component } from "./component";
 
 export class TaskInput extends Component<HTMLDivElement, HTMLFormElement> {
     titleInputElement: HTMLInputElement;
