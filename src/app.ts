@@ -1,4 +1,4 @@
-import {Draggable, DragTarget} from './drag-drop-interfaces.js';
+import {Draggable, DragTarget} from './models/drag-drop-interfaces.js';
 import { StaticDetails } from './utilities/staticDetails.js';
 import {Validatable, Validation} from './utilities/validation.js';
 import Autobind from "./decorators/autobind.js";
