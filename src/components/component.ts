@@ -1,4 +1,4 @@
-import {Validation} from '../utilities/validation';
+import {Validation} from '../utilities/validation.js';
 
 export abstract class Component<T extends HTMLElement, U extends HTMLElement> {
     templateElement: HTMLTemplateElement;
