@@ -1,143 +1,61 @@
-/** Validation */
-interface Validatable {
-  value: string | number;
-  required?: boolean;
-  minLength?: number;
-  maxLength?: number;
-  min?: number;
-  max?: number;
-}
+import {Draggable, DragTarget} from './drag-drop-interfaces.js';
+import { StaticDetails } from './utilities/staticDetails.js';
+import {Validatable, Validation} from './utilities/validation.js';
+import Autobind from "./decorators/autobind.js";
+//import { Component } from './components/component.js';
 
-interface Draggable {
-    dragStartHandler(event: DragEvent): void;
-    dragEndHandler(event: DragEvent): void;
-}
-
-interface DragTarget {
-    dragOverHandler(event: DragEvent): void;
-    dragLeaveHandler(event: DragEvent): void;
-    dropHandler(event: DragEvent): void;
-}
-
-class Utilities{
-    static readonly TEXT_PLAIN = "text/plain"; 
-}
-
-function validate(validatebleInput: Validatable): boolean {
-  // Empty input
-  if (
-    validatebleInput.required &&
-    validatebleInput.value.toString().trim().length < 1
-  ) {
-    return false;
-  }
-
-  // string lengths
-  if (typeof validatebleInput.value === "string") {
-    if (validatebleInput.minLength != null) {
-      if (validatebleInput.value.length < validatebleInput.minLength)
-        return false;
+abstract class Component<T extends HTMLElement, U extends HTMLElement> {
+    templateElement: HTMLTemplateElement;
+    // Where to put element
+    hostElement: T;
+    // Type of element
+    element: U;
+  
+    constructor(
+      templateId: string,
+      hostElementId: string,
+      insertElementLocation: InsertPosition,
+      newElementId?: string
+    ) {
+      this.templateElement = document.getElementById(
+        templateId
+      ) as HTMLTemplateElement;
+  
+      Validation.checkHTMLElementIsValid(
+        [this.templateElement],
+        "task-input does not exist in index as HTMLTemplateElement"
+      );
+  
+      this.hostElement = document.getElementById(hostElementId) as T;
+      Validation.checkHTMLElementIsValid(
+        [this.hostElement],
+        `${hostElementId} does not exist in index`
+      );
+  
+      const importedNode = document.importNode(
+        this.templateElement.content,
+        true
+      );
+  
+      this.element = importedNode.firstElementChild as U;
+  
+      if (newElementId) this.element.id = newElementId;
+  
+      this.attach(insertElementLocation);
     }
-
-    if (validatebleInput.maxLength != null) {
-      if (validatebleInput.value.length > validatebleInput.maxLength)
-        return false;
+  
+    private attach(position: InsertPosition) {
+      this.hostElement.insertAdjacentElement(position, this.element);
     }
+  
+    abstract configure(): void;
+    abstract renderContent(): void;
   }
-  // number limits
-  else if (typeof validatebleInput.value === "number") {
-    if (validatebleInput.min != null) {
-      if (validatebleInput.value < validatebleInput.min) return false;
-    }
-
-    if (validatebleInput.max != null) {
-      if (validatebleInput.value > validatebleInput.max) return false;
-    }
-  }
-
-  return true;
-}
-
-function checkHTMLElementIsValid(
-  elements: HTMLElement[],
-  errorMessage: string
-) {
-  for (const element in elements) {
-    if (element === null) throw new Error(errorMessage);
-  }
-}
-
-/** Decorators */
-function Autobind(
-  target: any,
-  methodName: string,
-  descriptor: PropertyDescriptor
-) {
-  const originalMethod = descriptor.value;
-
-  const adjDescriptor: PropertyDescriptor = {
-    configurable: true,
-
-    get() {
-      const boundFn = originalMethod.bind(this);
-      return boundFn;
-    },
-  };
-  return adjDescriptor;
-}
 
 enum TaskStatus {
   toDo = "To Do",
   doing = "Doing",
   done = "Done",
-}
-
-abstract class Component<T extends HTMLElement, U extends HTMLElement> {
-  templateElement: HTMLTemplateElement;
-  // Where to put element
-  hostElement: T;
-  // Type of element
-  element: U;
-
-  constructor(
-    templateId: string,
-    hostElementId: string,
-    insertElementLocation: InsertPosition,
-    newElementId?: string
-  ) {
-    this.templateElement = document.getElementById(
-      templateId
-    ) as HTMLTemplateElement;
-
-    checkHTMLElementIsValid(
-      [this.templateElement],
-      "task-input does not exist in index as HTMLTemplateElement"
-    );
-
-    this.hostElement = document.getElementById(hostElementId) as T;
-    checkHTMLElementIsValid(
-      [this.hostElement],
-      `${hostElementId} does not exist in index`
-    );
-
-    const importedNode = document.importNode(
-      this.templateElement.content,
-      true
-    );
-
-    this.element = importedNode.firstElementChild as U;
-
-    if (newElementId) this.element.id = newElementId;
-
-    this.attach(insertElementLocation);
-  }
-
-  private attach(position: InsertPosition) {
-    this.hostElement.insertAdjacentElement(position, this.element);
-  }
-
-  abstract configure(): void;
-  abstract renderContent(): void;
 }
 
 class TaskData {
@@ -219,7 +137,7 @@ class TaskItem extends Component<HTMLUListElement, HTMLLIElement> implements Dra
 
     @Autobind
     dragStartHandler(event: DragEvent): void {
-        event.dataTransfer?.setData(Utilities.TEXT_PLAIN, this.taskData.id);
+        event.dataTransfer?.setData(StaticDetails.TEXT_PLAIN, this.taskData.id);
         event.dataTransfer!.effectAllowed = "move";
     }
 
@@ -258,7 +176,7 @@ class TaskInput extends Component<HTMLDivElement, HTMLFormElement> {
     this.effortInputElement = this.element.querySelector(
       "#effort"
     ) as HTMLInputElement;
-    checkHTMLElementIsValid(
+    Validation.checkHTMLElementIsValid(
       [
         this.titleInputElement,
         this.descriptionInputElement,
@@ -291,9 +209,9 @@ class TaskInput extends Component<HTMLDivElement, HTMLFormElement> {
     };
 
     if (
-      !validate(titleValidate) ||
-      !validate(descriptionValidate) ||
-      !validate(effortValidate)
+      !Validation.validate(titleValidate) ||
+      !Validation.validate(descriptionValidate) ||
+      !Validation.validate(effortValidate)
     ) {
       alert("Invalid input, please try again!");
       return;
@@ -338,7 +256,7 @@ class TaskList extends Component<HTMLDivElement, HTMLElement> implements DragTar
   @Autobind
     dragOverHandler(event: DragEvent): void {
         
-        if(event.dataTransfer === null || event.dataTransfer.types[0] != Utilities.TEXT_PLAIN)
+        if(event.dataTransfer === null || event.dataTransfer.types[0] != StaticDetails.TEXT_PLAIN)
            return;
         
         event.preventDefault();
@@ -354,7 +272,7 @@ class TaskList extends Component<HTMLDivElement, HTMLElement> implements DragTar
 
     @Autobind
     dropHandler(event: DragEvent): void {
-        const taskId = event.dataTransfer!.getData(Utilities.TEXT_PLAIN);
+        const taskId = event.dataTransfer!.getData(StaticDetails.TEXT_PLAIN);
         taskManager.moveTask(taskId, this.type);
     }
 
@@ -377,7 +295,7 @@ class TaskList extends Component<HTMLDivElement, HTMLElement> implements DragTar
     const listEl = document.getElementById(
       `${this.type}-tasks-list`
     ) as HTMLUListElement;
-    checkHTMLElementIsValid(
+    Validation.checkHTMLElementIsValid(
       [listEl],
       `${this.type}-tasks-list does not exist in index as HTMLUListElement`
     );
@@ -406,3 +324,4 @@ const taskInput = new TaskInput();
 const toDoList = new TaskList(TaskStatus.toDo);
 const doingList = new TaskList(TaskStatus.doing);
 const doneList = new TaskList(TaskStatus.done);
+
