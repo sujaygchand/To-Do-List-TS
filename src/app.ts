@@ -9,4 +9,3 @@ new TaskInput();
 new TaskList(TaskStatus.toDo);
 new TaskList(TaskStatus.doing);
 new TaskList(TaskStatus.done);
-
